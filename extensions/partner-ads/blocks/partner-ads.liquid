@@ -1,0 +1,18 @@
+<div class="partner-ads" data-partner-ads data-proxy-path="{{ block.settings.proxy_path | escape }}" hidden {{ block.shopify_attributes }}></div>
+{% schema %}
+{
+  "name": "Partner ads",
+  "target": "section",
+  "javascript": "partner-ads.js",
+  "stylesheet": "partner-ads.css",
+  "settings": [
+    {
+      "type": "text",
+      "id": "proxy_path",
+      "label": "App proxy path",
+      "default": "/apps/partner-ads",
+      "info": "Only change this if you changed the app proxy URL in Shopify."
+    }
+  ]
+}
+{% endschema %}

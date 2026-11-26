@@ -1,0 +1,46 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "27dacaba9b7ae0116d318dad9c8ba17b"
+name = "Advertising app"
+application_url = "https://example.com"
+embedded = true
+
+[build]
+automatically_update_urls_on_dev = true
+include_config_on_deploy = true
+
+[access_scopes]
+scopes = "read_products,write_app_proxy"
+
+[auth]
+redirect_urls = [
+  "https://example.com/auth/callback",
+  "https://example.com/auth/shopify/callback"
+]
+
+[webhooks]
+api_version = "2026-10"
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/app/uninstalled"
+  topics = ["app/uninstalled"]
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/scopes_update" ]
+  uri = "/webhooks/app/scopes_update"
+[app_proxy]
+url = "/proxy"
+prefix = "apps"
+subpath = "partner-ads"
+
+[[webhooks.subscriptions]]
+uri = "/webhooks/products/update"
+topics = ["products/update"]
+
+[[webhooks.subscriptions]]
+uri = "/webhooks/products/delete"
+topics = ["products/delete"]
+
+[[webhooks.subscriptions]]
+uri = "/webhooks/compliance"
+compliance_topics = ["customers/data_request", "customers/redact", "shop/redact"]

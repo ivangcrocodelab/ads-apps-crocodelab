@@ -1,0 +1,199 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Note that some adapters may set a maximum length for the String type by default, please ensure your strings are long
+// enough when changing adapters.
+// See https://www.prisma.io/docs/orm/reference/prisma-schema-reference#string for more information
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Session {
+  id                  String    @id
+  shop                String
+  state               String
+  isOnline            Boolean   @default(false)
+  scope               String?
+  expires             DateTime?
+  accessToken         String
+  userId              BigInt?
+  firstName           String?
+  lastName            String?
+  email               String?
+  accountOwner        Boolean   @default(false)
+  locale              String?
+  collaborator        Boolean?  @default(false)
+  emailVerified       Boolean?  @default(false)
+  refreshToken        String?
+  refreshTokenExpires DateTime?
+}
+
+model Shop {
+  id                String                   @id
+  domain            String                   @unique
+  name              String
+  niche             String?
+  advertiserEnabled Boolean                  @default(false)
+  publisherEnabled  Boolean                  @default(false)
+  catalogConsent    Boolean                  @default(false)
+  blocked           Boolean                  @default(false)
+  installedAt       DateTime                 @default(now())
+  uninstalledAt     DateTime?
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+  account           CreditAccount?
+  settingsVersion   Int                      @default(0)
+  categories        ShopCategoryPreference[]
+  outgoing          Partnership[]            @relation("advertiser")
+  incoming          Partnership[]            @relation("publisher")
+  invitations       PartnerInvitation[]
+  products          ProductAd[]
+  loads             BlockLoad[]
+}
+
+model ShopCategoryPreference {
+  shopId String
+  role   String
+  niche  String
+  shop   Shop   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@id([shopId, role, niche])
+}
+
+model Partnership {
+  id                String  @id @default(cuid())
+  advertiserId      String
+  publisherId       String
+  selected          Boolean @default(false)
+  approved          Boolean @default(false)
+  advertiserBlocked Boolean @default(false)
+  publisherBlocked  Boolean @default(false)
+  version           Int     @default(0)
+  advertiser        Shop    @relation("advertiser", fields: [advertiserId], references: [id], onDelete: Cascade)
+  publisher         Shop    @relation("publisher", fields: [publisherId], references: [id], onDelete: Cascade)
+
+  @@unique([advertiserId, publisherId])
+}
+
+model PartnerInvitation {
+  tokenHash String   @id
+  shopId    String
+  expiresAt DateTime
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+}
+
+model ProductAd {
+  id                String    @id @default(cuid())
+  shopId            String
+  productId         String
+  title             String
+  imageUrl          String
+  productUrl        String
+  active            Boolean   @default(false)
+  selected          Boolean   @default(true)
+  hidden            Boolean   @default(false)
+  rightsConfirmedAt DateTime
+  verifiedAt        DateTime?
+  revision          Int       @default(0)
+  shop              Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, productId])
+}
+
+model BlockLoad {
+  id          String   @id @default(uuid())
+  publisherId String
+  createdAt   DateTime @default(now())
+  publisher   Shop     @relation(fields: [publisherId], references: [id], onDelete: Cascade)
+
+  @@index([publisherId, createdAt])
+}
+
+model ClickToken {
+  nonce             String    @id
+  advertiserId      String
+  publisherId       String
+  productAdId       String
+  pairId            String
+  pairVersion       Int
+  productRevision   Int
+  advertiserVersion Int
+  publisherVersion  Int
+  expiresAt         DateTime
+  consumedAt        DateTime?
+  createdAt         DateTime  @default(now())
+
+  @@index([expiresAt])
+  @@index([advertiserId])
+  @@index([publisherId])
+}
+
+model CountedClick {
+  nonce        String   @id
+  advertiserId String?
+  publisherId  String?
+  createdAt    DateTime @default(now())
+
+  @@index([advertiserId, createdAt])
+  @@index([publisherId, createdAt])
+}
+
+model RateLimit {
+  key       String   @id
+  count     Int      @default(1)
+  expiresAt DateTime
+
+  @@index([expiresAt])
+}
+
+model WebhookReceipt {
+  id        String   @id
+  topic     String
+  createdAt DateTime @default(now())
+}
+
+model BonusReceipt {
+  shopHash String  @id
+  granted  Boolean @default(true)
+}
+
+model OperatorAudit {
+  id        String   @id @default(cuid())
+  shopId    String?
+  action    String
+  reason    String
+  createdAt DateTime @default(now())
+}
+
+model CreditAccount {
+  shopId  String        @id
+  balance Int           @default(0)
+  shop    Shop          @relation(fields: [shopId], references: [id], onDelete: Restrict)
+  entries CreditEntry[]
+}
+
+model CreditOperation {
+  id             String        @id @default(cuid())
+  idempotencyKey String        @unique
+  kind           String
+  reason         String
+  createdAt      DateTime      @default(now())
+  entries        CreditEntry[]
+}
+
+model CreditEntry {
+  id          String          @id @default(cuid())
+  operationId String
+  shopId      String
+  amount      Int
+  operation   CreditOperation @relation(fields: [operationId], references: [id], onDelete: Restrict)
+  account     CreditAccount   @relation(fields: [shopId], references: [shopId], onDelete: Restrict)
+
+  @@unique([operationId, shopId])
+  @@index([shopId])
+}
